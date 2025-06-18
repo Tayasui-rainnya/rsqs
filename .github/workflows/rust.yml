@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*.*.*'   # 仅在推送符合 vX.X.X 格式的 tag 时触发
+      - 'v0.0.1'   # 仅在推送符合 vX.X.X 格式的 tag 时触发
 
 jobs:
   build:
