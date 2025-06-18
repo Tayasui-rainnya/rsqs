@@ -1,0 +1,74 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # 仅在推送符合 vX.X.X 格式的 tag 时触发
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Package binary
+        run: |
+          mkdir dist
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp target/release/rsqs.exe dist/
+            7z a rsqs-${{ runner.os }}.zip dist/rsqs.exe
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            cp target/release/rsqs dist/
+            zip -r rsqs-${{ runner.os }}.zip dist/rsqs
+          else
+            cp target/release/rsqs dist/
+            zip -r rsqs-${{ runner.os }}.zip dist/rsqs
+          fi
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rsqs-${{ runner.os }}
+          path: rsqs-${{ runner.os }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/rsqs-Windows/rsqs-Windows.zip
+            artifacts/rsqs-macOS/rsqs-macOS.zip
+            artifacts/rsqs-Linux/rsqs-Linux.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
