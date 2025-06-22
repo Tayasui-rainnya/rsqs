@@ -19,7 +19,7 @@
 
 2. **安装依赖**
     - Rust 工具链：[安装 Rust](https://www.rust-lang.org/tools/install)
-    - Linux 依赖（如需）：
+    - Linux 依赖（没试过我不知道，xcap 需要这些依赖）：
         ```sh
         # Debian/Ubuntu
         sudo apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev
