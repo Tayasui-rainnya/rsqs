@@ -1,6 +1,6 @@
 # rsqs
 
-`rsqs` 是一个基于 Rust 的跨平台屏幕捕获与二维码识别工具，支持 Windows，Linux (X11/Wayland)（还没试，我等下就去试） 和 macOS（按理说支持，但我没 mac 我试不了）。rsqs 集成了屏幕截图、剪贴板操作、二维码扫描等功能，适合办公辅助。
+`rsqs` （Rust Screenshot & QRCode Scanner）是一个基于 Rust 的跨平台屏幕捕获与二维码识别工具，支持 Windows，Linux (X11/Wayland)（workflow 不会整） 和 macOS（按理说支持，但我没 mac 我试不了）。rsqs 集成了屏幕截图、剪贴板操作、二维码扫描等功能，适合办公辅助。
 
 ## 功能特性
 
@@ -19,7 +19,7 @@
 
 2. **安装依赖**
     - Rust 工具链：[安装 Rust](https://www.rust-lang.org/tools/install)
-    - Linux 依赖（如需）：
+    - Linux 依赖（没试过我不知道，xcap 需要这些依赖）：
         ```sh
         # Debian/Ubuntu
         sudo apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev
