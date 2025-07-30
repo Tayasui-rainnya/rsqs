@@ -9,7 +9,7 @@ use druid::{
     LifeCycleCtx, Menu, MenuItem, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
     WindowDesc,
 };
-// 这里的 image 是我们在 Cargo.toml 中指定的 v0.24.9
+//  image v0.24.9
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 use rfd::MessageDialog;
 use std::sync::Arc;
@@ -21,7 +21,7 @@ use qrcode::scan_qr_code;
 #[derive(Clone, Data)]
 struct AppState {
     #[data(same_fn = "PartialEq::eq")]
-    screenshot: Arc<DynamicImage>, // 这个是 image v0.24.9 的 DynamicImage
+    screenshot: Arc<DynamicImage>, // image v0.24.9 的 DynamicImage
     is_selecting: bool,
     start_pos: Point,
     current_pos: Point,
