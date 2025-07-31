@@ -8,8 +8,11 @@ use druid::piet::PietImage;
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, Menu, MenuItem, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
-    WindowDesc,
+    WindowDesc, SysMods,
 };
+use druid::keyboard_types::Key;
+
+
 //  image v0.24.9
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba}; // 图像处理
 use rfd::MessageDialog; // 文件/消息对话框
@@ -83,14 +86,32 @@ impl Widget<AppState> for ScreenshotWidget {
     /// 处理鼠标和键盘事件，实现选区和菜单弹出
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, _env: &Env) {
         match event {
-            // 鼠标左键按下：开始选择
+            // 鼠标左键按下：
+            // - 单击：开始选择
+            // - 双击：截取全屏并复制
             Event::MouseDown(e) if e.button.is_left() => {
-                data.selection_rect = None; 
-                data.is_selecting = true;
-                data.start_pos = e.pos;
-                data.current_pos = e.pos;
-                self.previous_rect = Some(data.get_current_selection());
-                ctx.request_paint();
+                // 如果是双击 (或更多次点击)
+                if e.count >= 2 {
+                    // 将选区设置为整个屏幕
+                    data.selection_rect = Some(ctx.size().to_rect());
+                    // 裁剪图像
+                    if let Some(img) = data.crop_image() {
+                        // 复制到剪贴板并退出
+                        if copy_image_to_clipboard(&img).is_ok() {
+                            ctx.submit_command(druid::commands::QUIT_APP);
+                        }
+                    }
+                    // 阻止后续的拖动选择逻辑
+                    data.is_selecting = false;
+                } else {
+                    // 如果是单击，执行原来的开始选择逻辑
+                    data.selection_rect = None;
+                    data.is_selecting = true;
+                    data.start_pos = e.pos;
+                    data.current_pos = e.pos;
+                    self.previous_rect = Some(data.get_current_selection());
+                    ctx.request_paint();
+                }
             }
 
             // 鼠标拖动：更新选择区域
@@ -116,6 +137,7 @@ impl Widget<AppState> for ScreenshotWidget {
                         data.selection_rect = Some(sel);
                         ctx.show_context_menu(make_context_menu(), e.pos);
                     } else {
+                        // 如果选区太小 (通常是单击而非拖动)，则清除选区
                         data.selection_rect = None;
                     }
                     ctx.request_paint(); 
@@ -132,11 +154,6 @@ impl Widget<AppState> for ScreenshotWidget {
                 ctx.show_context_menu(make_context_menu(), e.pos);
             }
             
-            // ESC 键退出
-            Event::KeyDown(key_event) if key_event.key == druid::keyboard_types::Key::Escape => {
-                ctx.submit_command(druid::commands::QUIT_APP);
-            }
-
             _ => {}
         }
     }
@@ -148,8 +165,7 @@ impl Widget<AppState> for ScreenshotWidget {
         _event: &LifeCycle,
         _data: &AppState,
         _env: &Env,
-    ) {
-    }
+    ) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, old: &AppState, data: &AppState, _env: &Env) {
         if !Arc::ptr_eq(&old.screenshot, &data.screenshot) {
@@ -233,6 +249,7 @@ fn make_context_menu() -> Menu<AppState> {
 }
 
 // ----------- 程序入口 -----------
+// ----------- 程序入口 -----------
 fn main() -> Result<()> {
     // 捕获主显示器屏幕
     let mons = Monitor::all()?;
@@ -243,12 +260,30 @@ fn main() -> Result<()> {
     let buf = image::ImageBuffer::from_raw(w, h, raw).ok_or_else(|| anyhow::anyhow!("转换失败"))?;
     let dyn_img = DynamicImage::ImageRgba8(buf);
 
+    // 创建一个菜单项用于退出，并为其绑定 ESC 热键
+    // 即使菜单不可见，热键依然全局有效
+
+
     // 初始化应用状态和窗口
-    let init = AppState { screenshot: Arc::new(dyn_img), is_selecting: false, start_pos: Point::ZERO, current_pos: Point::ZERO, selection_rect: None };
+    let init = AppState { 
+        screenshot: Arc::new(dyn_img), 
+        is_selecting: false, 
+        start_pos: Point::ZERO, 
+        current_pos: Point::ZERO, 
+        selection_rect: None 
+    };
+
+    // 使用构建者模式创建窗口描述
     let window = WindowDesc::new(ScreenshotWidget { cached_image: None, previous_rect: None })
         .window_size((w as f64, h as f64))
         .show_titlebar(false)
-        .resizable(false);
+        .resizable(false) // <-- 这里没有分号
+        .menu(|_window_id, _app_state, _env| {
+            let quit_menu_item = MenuItem::<AppState>::new("退出")
+                .hotkey(SysMods::None, Key::Escape)
+                .command(druid::commands::QUIT_APP);
+            Menu::new("AppMenu").entry(quit_menu_item)
+        });
     AppLauncher::with_window(window).launch(init)?;
     Ok(())
 }
