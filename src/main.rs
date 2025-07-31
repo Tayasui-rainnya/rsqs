@@ -117,8 +117,15 @@ impl Widget<AppState> for ScreenshotWidget {
             }
             Event::MouseMove(e) => {
                 if data.is_selecting {
+                    let old_rect = data.get_current_selection();
+                    let last_pos = data.current_pos;
                     data.current_pos = e.pos;
-                    ctx.request_paint();
+                    let new_rect = data.get_current_selection();
+                    // 只有距离变化较大时才重绘
+                    if (last_pos - e.pos).hypot() > 2.0 {
+                        let repaint_rect = old_rect.union(new_rect).inset(2.0);
+                        ctx.request_paint_rect(repaint_rect);
+                    }
                 }
             }
             Event::MouseUp(e) => {
@@ -146,7 +153,11 @@ impl Widget<AppState> for ScreenshotWidget {
         _env: &Env,
     ) {
     }
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppState, _data: &AppState, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppState, data: &AppState, _env: &Env) {
+        // 只有截图内容变化时才重建缓存
+        if !Arc::ptr_eq(&old_data.screenshot, &data.screenshot) {
+            self.cached_image = None;
+        }
         ctx.request_paint();
     }
     fn layout(
@@ -189,18 +200,28 @@ impl Widget<AppState> for ScreenshotWidget {
                     None
                 }
             }) {
+                // 只在需要的区域绘制遮罩和边框
+                let region = ctx.region().bounding_box();
                 let (width, height) = (size.width, size.height);
-                let top = Rect::new(0.0, 0.0, width, selection.y0);
-                let bottom = Rect::new(0.0, selection.y1, width, height);
-                let left = Rect::new(0.0, selection.y0, selection.x0, selection.y1);
-                let right = Rect::new(selection.x1, selection.y0, width, selection.y1);
-                ctx.fill(top, &mask_color);
-                ctx.fill(bottom, &mask_color);
-                ctx.fill(left, &mask_color);
-                ctx.fill(right, &mask_color);
-                ctx.stroke(selection, &Color::WHITE, 1.0);
+                let top = Rect::new(0.0, 0.0, width, selection.y0).intersect(region);
+                let bottom = Rect::new(0.0, selection.y1, width, height).intersect(region);
+                let left = Rect::new(0.0, selection.y0, selection.x0, selection.y1).intersect(region);
+                let right = Rect::new(selection.x1, selection.y0, width, selection.y1).intersect(region);
+                if !top.is_empty() { ctx.fill(top, &mask_color); }
+                if !bottom.is_empty() { ctx.fill(bottom, &mask_color); }
+                if !left.is_empty() { ctx.fill(left, &mask_color); }
+                if !right.is_empty() { ctx.fill(right, &mask_color); }
+                // 边框只在 region 内绘制
+                let border = selection.intersect(region);
+                if !border.is_empty() {
+                    ctx.stroke(border, &Color::WHITE, 1.0);
+                }
             } else {
-                ctx.fill(full_rect, &Color::rgba8(0, 0, 0, 64));
+                let region = ctx.region().bounding_box();
+                let mask = full_rect.intersect(region);
+                if !mask.is_empty() {
+                    ctx.fill(mask, &Color::rgba8(0, 0, 0, 64));
+                }
             }
         }
     }
