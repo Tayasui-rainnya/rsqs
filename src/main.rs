@@ -83,9 +83,10 @@ impl Widget<AppState> for ScreenshotWidget {
                 data.start_pos = e.pos;
                 data.current_pos = e.pos;
                 data.selection_rect = None;
+                ctx.request_paint();
                 self.previous_rect = Some(data.get_current_selection());
-                ctx.request_paint_rect(self.previous_rect.unwrap().inset(-2.0));
             }
+
             Event::MouseMove(e) if data.is_selecting => {
                 let old_rect = self.previous_rect.unwrap_or_else(|| data.get_current_selection());
                 data.current_pos = e.pos;
@@ -95,9 +96,11 @@ impl Widget<AppState> for ScreenshotWidget {
                 let dirty = old_rect.union(new_rect).inset(2.0); // 加一些外边距，确保边缘也刷新
                 ctx.request_paint_rect(dirty);
             }
+            
             Event::MouseUp(e) if e.button.is_left() => {
                 if data.is_selecting {
                     data.is_selecting = false;
+                    
                     let sel = data.get_current_selection();
                     if sel.width() > 1.0 && sel.height() > 1.0 {
                         data.selection_rect = Some(sel);
