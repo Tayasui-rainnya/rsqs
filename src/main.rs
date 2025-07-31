@@ -118,14 +118,11 @@ impl Widget<AppState> for ScreenshotWidget {
             Event::MouseMove(e) => {
                 if data.is_selecting {
                     let old_rect = data.get_current_selection();
-                    let last_pos = data.current_pos;
                     data.current_pos = e.pos;
                     let new_rect = data.get_current_selection();
-                    // 只有距离变化较大时才重绘
-                    if (last_pos - e.pos).hypot() > 2.0 {
-                        let repaint_rect = old_rect.union(new_rect).inset(2.0);
-                        ctx.request_paint_rect(repaint_rect);
-                    }
+                    // 扩大重绘区域，包含边框
+                    let repaint_rect = old_rect.union(new_rect).inset(2.0);
+                    ctx.request_paint_rect(repaint_rect);
                 }
             }
             Event::MouseUp(e) => {
