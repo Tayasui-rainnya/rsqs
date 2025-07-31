@@ -260,9 +260,6 @@ fn main() -> Result<()> {
     let buf = image::ImageBuffer::from_raw(w, h, raw).ok_or_else(|| anyhow::anyhow!("转换失败"))?;
     let dyn_img = DynamicImage::ImageRgba8(buf);
 
-    // 创建一个菜单项用于退出，并为其绑定 ESC 热键
-    // 即使菜单不可见，热键依然全局有效
-
 
     // 初始化应用状态和窗口
     let init = AppState { 
