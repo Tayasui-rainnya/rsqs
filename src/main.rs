@@ -45,10 +45,7 @@ impl AppState {
                 .to_rgba8()
         })
     }
-
-    fn get_full_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        self.screenshot.to_rgba8()
-    }
+    
 }
 
 // Clipboard helpers
@@ -100,7 +97,7 @@ impl Widget<AppState> for ScreenshotWidget {
             Event::MouseUp(e) if e.button.is_left() => {
                 if data.is_selecting {
                     data.is_selecting = false;
-                    
+
                     let sel = data.get_current_selection();
                     if sel.width() > 1.0 && sel.height() > 1.0 {
                         data.selection_rect = Some(sel);
@@ -174,9 +171,6 @@ impl Widget<AppState> for ScreenshotWidget {
 
     }
 }
-
-
-
 
 fn make_context_menu() -> Menu<AppState> {
     Menu::empty()
