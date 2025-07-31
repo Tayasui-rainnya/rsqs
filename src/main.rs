@@ -75,43 +75,71 @@ struct ScreenshotWidget {
 impl Widget<AppState> for ScreenshotWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, _env: &Env) {
         match event {
+            // --- 鼠标左键按下：开始选择 ---
             Event::MouseDown(e) if e.button.is_left() => {
+                // 清除上一次的最终选区，准备开始新的选择
+                data.selection_rect = None; 
                 data.is_selecting = true;
                 data.start_pos = e.pos;
                 data.current_pos = e.pos;
-                data.selection_rect = None;
-                ctx.request_paint();
                 self.previous_rect = Some(data.get_current_selection());
+                ctx.request_paint();
             }
 
+            // --- 鼠标拖动：更新选择区域 ---
             Event::MouseMove(e) if data.is_selecting => {
                 let old_rect = self.previous_rect.unwrap_or_else(|| data.get_current_selection());
                 data.current_pos = e.pos;
                 let new_rect = data.get_current_selection();
                 self.previous_rect = Some(new_rect);
 
-                let dirty = old_rect.union(new_rect).inset(2.0); // 加一些外边距，确保边缘也刷新
+                // 只重绘变化的区域以提高性能
+                let dirty = old_rect.union(new_rect).inset(2.0);
                 ctx.request_paint_rect(dirty);
             }
             
+            // --- 鼠标左键抬起：完成选择并显示菜单 (触发方式 1) ---
             Event::MouseUp(e) if e.button.is_left() => {
                 if data.is_selecting {
-                    data.is_selecting = false;
+                    data.is_selecting = false; // 结束选择状态
 
                     let sel = data.get_current_selection();
+                    // 只有当选区足够大时才认为是有效选择
                     if sel.width() > 1.0 && sel.height() > 1.0 {
                         data.selection_rect = Some(sel);
                         ctx.show_context_menu(make_context_menu(), e.pos);
                     } else {
                         data.selection_rect = None;
                     }
-                    ctx.request_paint_rect(sel.inset(-2.0));
+                    // 请求重绘以移除选择框的边框，并显示最终的遮罩
+                    ctx.request_paint(); 
                 }
             }
+
+            // --- 【新增逻辑】鼠标右键按下：直接显示菜单 (触发方式 2) ---
+            Event::MouseDown(e) if e.button.is_right() => {
+                // 如果当前没有一个已经确定的选区...
+                if data.selection_rect.is_none() {
+                    // ...那么我们将整个屏幕作为选区
+                    let screen_rect = ctx.size().to_rect();
+                    data.selection_rect = Some(screen_rect);
+                    // 并且请求重绘，以防万一（虽然全屏选区看不出遮罩）
+                    ctx.request_paint();
+                }
+                // 无论之前是否有选区，现在都显示菜单
+                ctx.show_context_menu(make_context_menu(), e.pos);
+            }
+            
+            // --- (可选，但推荐) 增加Escape键退出功能 ---
+            Event::KeyDown(key_event) if key_event.key == druid::keyboard_types::Key::Escape => {
+                ctx.submit_command(druid::commands::QUIT_APP);
+            }
+
             _ => {}
         }
     }
-
+    
+    // ... lifecycle, update, layout, paint 方法保持不变 ...
     fn lifecycle(
         &mut self,
         _ctx: &mut LifeCycleCtx,
@@ -119,7 +147,6 @@ impl Widget<AppState> for ScreenshotWidget {
         _data: &AppState,
         _env: &Env,
     ) {
-        // 不处理生命周期事件
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old: &AppState, data: &AppState, _env: &Env) {
@@ -171,6 +198,7 @@ impl Widget<AppState> for ScreenshotWidget {
 
     }
 }
+
 
 fn make_context_menu() -> Menu<AppState> {
     Menu::empty()
