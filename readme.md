@@ -1,6 +1,6 @@
 # rsqs
 
-`rsqs` （Rust Screenshot & QRCode Scanner）是一个基于 Rust 的屏幕捕获与二维码识别工具，支持 Windoows。rsqs 集成了屏幕截图、剪贴板操作、二维码扫描等功能，适合办公辅助。
+`rsqs` （Rust Screenshot & QRCode Scanner）是一个基于 Rust 的屏幕捕获与二维码识别工具，支持 Windoows 10/11。rsqs 集成了屏幕截图、剪贴板操作、二维码扫描等功能，适合办公辅助,集成到 PE 系统中。
 
 ## 功能特性
 
